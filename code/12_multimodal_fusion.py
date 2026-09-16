@@ -69,7 +69,7 @@ from common import (
 )
 from stats import cluster_bootstrap_ci, paired_bootstrap_test
 
-ROOT = Path("/Users/ytinglin/Downloads/ProjectCE903/25-26_CE903-SP_team01/MLmodel/data")
+ROOT = Path(r"C:\Users\2022g\Downloads\RAVDESS_IEMOCAP_CREMAD")
 
 # Teammate label vocabularies -> ours
 EMO_ALIAS = {
@@ -519,7 +519,7 @@ def main():
 
     d = args.data
     video_index = load_video_index(args.video_index or d / "firebase_data" / "video_index.json")
-    features = load_features(args.features or d / "features.jsonl")
+    features = load_features(args.features or d / "code/data/features.jsonl")
     meta_by_session, _ = load_metadata(args.metadata or d / "metadata_records.json")
     wear7 = load_wearable(args.wearable_e7 or d / "predictions_emotion7",
                           EMO_ALIAS, EMOTION_LABELS)
