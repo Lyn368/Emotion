@@ -1,0 +1,9 @@
+{
+  "config": "emotion2vec_base_delta",
+  "protocol": "grouped",
+  "seed": 42,
+  "encoder": "emotion2vec_base",
+  "delta": true,
+  "acoustic": false,
+  "frozen": true
+}

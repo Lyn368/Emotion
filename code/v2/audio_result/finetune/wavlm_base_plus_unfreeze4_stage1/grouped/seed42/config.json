@@ -1,0 +1,22 @@
+{
+  "mode": "cv",
+  "source": "microsoft/wavlm-base-plus",
+  "name": "wavlm_base_plus",
+  "unfreeze": "4",
+  "from_stage1": true,
+  "no_delta": false,
+  "protocols": "grouped",
+  "seeds": "42",
+  "epochs": 10,
+  "patience": 3,
+  "sessions_per_step": 4,
+  "free_segs": 4,
+  "pas_segs": 2,
+  "chunk": 16,
+  "lr_encoder": 2e-05,
+  "lr_head": 0.001,
+  "limit": null,
+  "protocol": "grouped",
+  "seed": 42,
+  "encoder_source": "C:\\Users\\2022g\\Downloads\\RAVDESS_IEMOCAP_CREMAD\\code\\v2\\models\\stage1\\wavlm_base_plus_iemocap"
+}

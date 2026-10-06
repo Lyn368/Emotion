@@ -1,0 +1,9 @@
+{
+  "run": "goemo_roberta_full_frozen",
+  "encoder": "SamLowe/roberta-base-go_emotions",
+  "mode": "frozen",
+  "granularity": "full",
+  "lexicon": false,
+  "protocol": "grouped",
+  "seed": 42
+}

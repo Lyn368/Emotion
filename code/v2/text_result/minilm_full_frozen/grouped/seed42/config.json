@@ -1,0 +1,9 @@
+{
+  "run": "minilm_full_frozen",
+  "encoder": "sentence-transformers/all-MiniLM-L6-v2",
+  "mode": "frozen",
+  "granularity": "full",
+  "lexicon": false,
+  "protocol": "grouped",
+  "seed": 42
+}

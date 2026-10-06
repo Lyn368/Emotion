@@ -1,0 +1,14 @@
+{
+  "7 emotions": {
+    "both_right": 94,
+    "audio_only": 37,
+    "text_only": 99,
+    "both_wrong": 154
+  },
+  "3 valence": {
+    "both_right": 102,
+    "audio_only": 48,
+    "text_only": 108,
+    "both_wrong": 126
+  }
+}

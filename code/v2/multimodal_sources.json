@@ -1,0 +1,46 @@
+[
+  {
+    "name": "metadata_records",
+    "file": "metadata_records.json",
+    "key_field": "session_id",
+    "kind": "features",
+    "fields": null,
+    "label_field": null,
+    "space": null,
+    "use": true,
+    "clip": "any"
+  },
+  {
+    "name": "per_video",
+    "file": "predictions_per_video.json",
+    "key_field": "video_id",
+    "kind": "label",
+    "fields": null,
+    "label_field": "predicted_label",
+    "space": "valence3",
+    "use": true,
+    "clip": "any"
+  },
+  {
+    "name": "emotion7",
+    "file": "predictions_emotion7",
+    "key_field": "session_id",
+    "kind": "label",
+    "fields": null,
+    "label_field": "y_pred",
+    "space": "emotion7",
+    "use": true,
+    "clip": "any"
+  },
+  {
+    "name": "valence3",
+    "file": "predictions_valence3",
+    "key_field": "session_id",
+    "kind": "label",
+    "fields": null,
+    "label_field": "y_pred",
+    "space": "valence3",
+    "use": true,
+    "clip": "any"
+  }
+]

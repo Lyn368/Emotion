@@ -1,0 +1,10 @@
+{
+  "audio_run": "C:\\Users\\2022g\\Downloads\\RAVDESS_IEMOCAP_CREMAD\\code\\v2\\audio_result\\frozen\\emotion2vec_base",
+  "text_run": "C:\\Users\\2022g\\Downloads\\RAVDESS_IEMOCAP_CREMAD\\code\\v2\\text_result\\goemo_roberta_full_frozen",
+  "sources": [
+    "metadata_records",
+    "emotion7"
+  ],
+  "protocol": "grouped",
+  "seed": 42
+}

@@ -1,0 +1,7 @@
+{
+  "model": "Qwen/Qwen2.5-3B-Instruct",
+  "prompt_sha1": "31a068b7f375874869a37e11db6d8735ddef83ee",
+  "system": "You are an expert annotator of emotion in spoken language.",
+  "user": "The following is an automatic transcript of a person speaking freely about their day. It may contain transcription errors. Based on what they say, decide which emotion the speaker most likely felt at the time of recording.\n\nTranscript:\n\"\"\"{text}\"\"\"\n\nChoose exactly one of: angry, disgust, fear, happy, neutral, sad, surprise.\nAnswer with the single word only.",
+  "load_4bit": false
+}

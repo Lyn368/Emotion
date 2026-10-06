@@ -1,0 +1,9 @@
+{
+  "run": "goemo_roberta_sentence_direct",
+  "encoder": "SamLowe/roberta-base-go_emotions",
+  "mode": "direct",
+  "granularity": "sentence",
+  "lexicon": false,
+  "protocol": "grouped",
+  "seed": 42
+}

@@ -1,0 +1,18 @@
+{
+  "source": "j-hartmann/emotion-english-distilroberta-base",
+  "head": "kept (permuted to canonical order)",
+  "train_counts": {
+    "neutral": 3600,
+    "sad": 3128,
+    "happy": 3600,
+    "surprise": 3600,
+    "angry": 3600,
+    "disgust": 573,
+    "fear": 631
+  },
+  "n_val": 2080,
+  "val_macro_f1_before": 0.46562557035753865,
+  "val_macro_f1_after": 0.6424268791619087,
+  "iemocap_text": "whisper",
+  "note": "Public data only."
+}

@@ -1,0 +1,14 @@
+{
+  "audio_run": "C:\\Users\\2022g\\Downloads\\RAVDESS_IEMOCAP_CREMAD\\code\\v2\\audio_result\\frozen\\emotion2vec_base",
+  "text_run": "C:\\Users\\2022g\\Downloads\\RAVDESS_IEMOCAP_CREMAD\\code\\v2\\text_result\\goemo_roberta_full_frozen",
+  "strategy": "text",
+  "protocol": "grouped",
+  "seed": 42,
+  "late_alphas": [
+    0.8,
+    0.15000000000000002,
+    0.125,
+    0.5750000000000001,
+    0.05000000000000001
+  ]
+}

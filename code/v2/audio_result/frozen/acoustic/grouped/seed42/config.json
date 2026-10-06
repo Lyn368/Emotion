@@ -1,0 +1,9 @@
+{
+  "config": "acoustic",
+  "protocol": "grouped",
+  "seed": 42,
+  "encoder": null,
+  "delta": false,
+  "acoustic": true,
+  "frozen": true
+}

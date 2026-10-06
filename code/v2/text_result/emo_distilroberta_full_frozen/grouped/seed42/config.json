@@ -1,0 +1,9 @@
+{
+  "run": "emo_distilroberta_full_frozen",
+  "encoder": "j-hartmann/emotion-english-distilroberta-base",
+  "mode": "frozen",
+  "granularity": "full",
+  "lexicon": false,
+  "protocol": "grouped",
+  "seed": 42
+}

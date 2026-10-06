@@ -1,0 +1,9 @@
+{
+  "run": "emo_distilroberta_sentence_direct",
+  "encoder": "j-hartmann/emotion-english-distilroberta-base",
+  "mode": "direct",
+  "granularity": "sentence",
+  "lexicon": false,
+  "protocol": "grouped",
+  "seed": 42
+}

@@ -1,0 +1,7 @@
+{
+  "source": "microsoft/wavlm-base-plus",
+  "unfreeze": "2",
+  "val_macro_f1": 0.4964878780540925,
+  "best_epoch": 10,
+  "note": "IEMOCAP only; no in-house data, so any CV fold can start from here."
+}

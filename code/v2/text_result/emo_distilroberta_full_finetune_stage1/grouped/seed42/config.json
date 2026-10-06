@@ -1,0 +1,9 @@
+{
+  "run": "emo_distilroberta_full_finetune_stage1",
+  "encoder": "j-hartmann/emotion-english-distilroberta-base",
+  "mode": "finetune",
+  "granularity": "full",
+  "lexicon": false,
+  "protocol": "grouped",
+  "seed": 42
+}

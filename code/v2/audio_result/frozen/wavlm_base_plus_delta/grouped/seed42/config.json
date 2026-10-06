@@ -1,0 +1,9 @@
+{
+  "config": "wavlm_base_plus_delta",
+  "protocol": "grouped",
+  "seed": 42,
+  "encoder": "wavlm_base_plus",
+  "delta": true,
+  "acoustic": false,
+  "frozen": true
+}
