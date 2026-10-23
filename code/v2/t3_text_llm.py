@@ -30,7 +30,7 @@ import numpy as np
 import torch
 
 from audio_common import OOF, load_evaluation, summarise
-from config import ensure_dirs, get_device
+from config import TEXT_EVAL_SETS, ensure_dirs, get_device, set_eval
 from labels import EMOTIONS
 from report import write_report
 from text_common import load_sessions
@@ -42,7 +42,22 @@ USER = ("The following is an automatic transcript of a person speaking freely ab
         'Transcript:\n"""{text}"""\n\n'
         "Choose exactly one of: angry, disgust, fear, happy, neutral, sad, surprise.\n"
         "Answer with the single word only.")
-PROMPT_SHA1 = hashlib.sha1((SYSTEM + "\n" + USER).encode("utf-8")).hexdigest()
+# IEMOCAP utterances are single turns of acted two-person dialogues, not free talk about a day.
+# Same instructions otherwise. The in-house prompt is unchanged, so its SHA-1 and caches still hold.
+USER_IEMOCAP = ("The following is an automatic transcript of one turn spoken by an actor in a two-person "
+                "conversation. It may contain transcription errors. Based on what they say, decide which "
+                "emotion the speaker most likely expressed in this turn.\n\n"
+                'Transcript:\n"""{text}"""\n\n'
+                "Choose exactly one of: angry, disgust, fear, happy, neutral, sad, surprise.\n"
+                "Answer with the single word only.")
+
+
+def prompt_for(eval_set: str) -> tuple[str, str]:
+    user = USER_IEMOCAP if eval_set == "iemocap" else USER
+    return user, hashlib.sha1((SYSTEM + "\n" + user).encode("utf-8")).hexdigest()
+
+
+PROMPT_SHA1 = prompt_for("own")[1]
 
 
 def load_llm(name, device, load_4bit):
@@ -65,8 +80,8 @@ def load_llm(name, device, load_4bit):
     return tok, model.eval()
 
 
-def label_probs(tok, model, text, device) -> np.ndarray:
-    msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": USER.format(text=text)}]
+def label_probs(tok, model, text, device, user: str = USER) -> np.ndarray:
+    msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user.format(text=text)}]
     return score_labels(tok, model, msgs, device)
 
 
@@ -98,7 +113,10 @@ def main():
     ap.add_argument("--model", default="Qwen/Qwen2.5-3B-Instruct")
     ap.add_argument("--load_4bit", action="store_true", help="for 7B on an 8 GB GPU (pip install bitsandbytes)")
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--eval", default="own", choices=TEXT_EVAL_SETS)
     a = ap.parse_args()
+    set_eval(a.eval)
+    USER_T, PROMPT_SHA1 = prompt_for(a.eval)
 
     dirs = ensure_dirs()
     device = get_device()
@@ -123,7 +141,7 @@ def main():
         t0 = time.time()
         with open(cache, "a", encoding="utf-8") as f:
             for i, s in enumerate(todo, 1):
-                p = label_probs(tok, model, s["text"], device)
+                p = label_probs(tok, model, s["text"], device, USER_T)
                 done[s["key"]] = p
                 f.write(json.dumps({"key": s["key"], "proba": p.round(6).tolist(), "prompt_sha1": PROMPT_SHA1}) + "\n")
                 f.flush()
@@ -155,7 +173,7 @@ def main():
     exp = dirs["text_result"] / run / "report"
     write_report(exp, y, P.argmax(1), P, spk, keys, title=f"text LLM zero-shot {a.model}",
                  extra_cols={"transcript": [s["text"] for s in sess]},
-                 config={"model": a.model, "prompt_sha1": PROMPT_SHA1, "system": SYSTEM, "user": USER,
+                 config={"model": a.model, "prompt_sha1": PROMPT_SHA1, "system": SYSTEM, "user": USER_T, "eval": a.eval,
                          "load_4bit": a.load_4bit})
     m = summarise(y, P.argmax(1))
     print(f"[INFO] acc7 {m['acc7']:.3f} F1_7 {m['f1_7']:.3f} acc3 {m['acc3']:.3f} F1_3 {m['f1_3']:.3f}")

@@ -51,18 +51,53 @@ def sources(root: Path) -> dict[str, Path]:
     }
 
 
+# ---------------------------------------------------------------------------
+# Evaluation set: which dataset the branches train and test on.
+#   own      the in-house sessions (default; unchanged behaviour)
+#   ravdess  cremad  iemocap   public benchmarks built by p6_public_sessions.py
+# Scripts set it with --eval. Public results go to code\v2\public_result\<name>\
+# so they can never be mixed up with the in-house results.
+# ---------------------------------------------------------------------------
+EVAL_SETS = ("own", "ravdess", "cremad", "iemocap")
+TEXT_EVAL_SETS = ("own", "iemocap")      # RAVDESS / CREMA-D repeat fixed sentences: no text signal
+
+
+def set_eval(name: str) -> None:
+    if name not in EVAL_SETS:
+        raise SystemExit(f"[ERROR] --eval must be one of {EVAL_SETS}")
+    os.environ["SER_EVAL"] = name
+
+
+def eval_name() -> str:
+    return os.environ.get("SER_EVAL", "own")
+
+
+def eval_paths(name: str | None = None) -> dict:
+    """Inputs of the active evaluation set."""
+    name = name or eval_name()
+    prep = V2_DIR / "preprocessing"
+    if name == "own":
+        return {"name": "own", "records": "own_dataset.json", "splits": prep / "splits.json",
+                "acoustic": prep / "features" / "acoustic_own.json", "embeddings": "own"}
+    return {"name": name, "records": f"{name}.json", "splits": prep / "public" / name / "splits.json",
+            "acoustic": prep / "features" / f"acoustic_{name}.json", "embeddings": name}
+
+
 def outputs() -> dict[str, Path]:
     """Everything v2 writes lives under code\\v2, next to v1, never inside it."""
+    name = eval_name()
+    res = V2_DIR if name == "own" else V2_DIR / "public_result" / name
     d = {
         "prep": V2_DIR / "preprocessing",
         "audio_measure": V2_DIR / "preprocessing" / "audio" / "measurement",
         "audio_encoder": V2_DIR / "preprocessing" / "audio" / "encoder",
         "embeddings": V2_DIR / "preprocessing" / "embeddings",
-        "audio_result": V2_DIR / "audio_result",
-        "text_result": V2_DIR / "text_result",
-        "fusion_result": V2_DIR / "fusion_result",
+        "audio_result": res / "audio_result",
+        "text_result": res / "text_result",
+        "fusion_result": res / "fusion_result",
         "multimodal_result": V2_DIR / "multimodal_result",
-        "models": V2_DIR / "models",
+        "models": V2_DIR / "models",                     # stage-1 checkpoints are shared
+        "final_models": V2_DIR / "models" / "final" if name == "own" else res / "models_final",
     }
     return d
 

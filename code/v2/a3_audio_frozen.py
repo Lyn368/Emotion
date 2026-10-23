@@ -32,7 +32,7 @@ import torch.nn.functional as F
 
 from audio_common import (N7, OOF, SessionModel, class_weights, load_evaluation, macro_f1,
                           read_json, summarise)
-from config import ensure_dirs, get_device, seed_everything
+from config import EVAL_SETS, ensure_dirs, eval_paths, get_device, seed_everything, set_eval
 from report import write_report
 from stats import paired_bootstrap_test
 
@@ -48,7 +48,8 @@ class EmbeddingStore:
     def __init__(self, model: str, dataset: str = "own"):
         d = ensure_dirs()["embeddings"] / model
         if not (d / f"{dataset}.npy").exists():
-            raise SystemExit(f"[ERROR] No embeddings for {model}. Run a2_encoder_embeddings.py --model {model}")
+            raise SystemExit(f"[ERROR] No {dataset} embeddings for {model}. "
+                             f"Run: python a2_encoder_embeddings.py --model {model} --dataset {dataset}")
         self.arr = np.load(d / f"{dataset}.npy", mmap_mode="r")
         self.rows = {}
         for l in (d / f"{dataset}_index.jsonl").read_text(encoding="utf-8").splitlines():
@@ -179,9 +180,13 @@ def main():
     ap.add_argument("--protocols", default="grouped,louo")
     ap.add_argument("--seeds", default="42")
     ap.add_argument("--final", action="store_true", help="train one model on all sessions and save it")
+    ap.add_argument("--eval", default="own", choices=EVAL_SETS,
+                    help="dataset to train and test on (public ones need p6_public_sessions.py)")
     args = ap.parse_args()
+    set_eval(args.eval)
 
     dirs = ensure_dirs()
+    print(f"[INFO] evaluation set: {args.eval} | results -> {dirs['audio_result']}")
     device = get_device()
     ev, splits = load_evaluation()
     keys = [s["key"] for s in ev]
@@ -193,11 +198,11 @@ def main():
     configs = args.configs.split(",") if args.configs else \
         ["acoustic"] + [c for e in encs for c in (e, f"{e}_delta", f"acoustic+{e}_delta")]
 
-    feat_path = dirs["prep"] / "features" / "acoustic_own.json"
+    feat_path = eval_paths()["acoustic"]
     ac_all = None
     if any(parse_config(c)[0] for c in configs):
         if not feat_path.exists():
-            raise SystemExit("[ERROR] Run a1_acoustic_features.py first.")
+            raise SystemExit(f"[ERROR] {feat_path.name} missing. Run: python a1_acoustic_features.py --dataset {args.eval}")
         ac_all, ac_names = acoustic_matrix(ev, read_json(feat_path))
         print(f"[INFO] acoustic session vector: {ac_all.shape[1]} values")
 
@@ -207,7 +212,7 @@ def main():
         use_ac, enc, delta = parse_config(cfg)
         store = None
         if enc:
-            store = stores.get(enc) or stores.setdefault(enc, EmbeddingStore(enc))
+            store = stores.get(enc) or stores.setdefault(enc, EmbeddingStore(enc, eval_paths()["embeddings"]))
             items = [(store.get(s["freestyle_clip"]), store.get(s.get("passage_clip")) if delta else None)
                      for s in ev]
             missing = [i for i, it in enumerate(items) if it[0] is None]
@@ -227,7 +232,7 @@ def main():
             va = np.array([i for i in range(len(ev)) if spk[i] in hold]); tr = np.setdiff1d(np.arange(len(ev)), va)
             ac = standardise(ac_all, tr) if use_ac else None
             model, score, ep = fit(make(), items, store, ac, y, tr, va, device, 42)
-            out = dirs["models"] / "final" / "audio_frozen" / cfg.replace("+", "_")
+            out = dirs["final_models"] / "audio_frozen" / cfg.replace("+", "_")
             out.mkdir(parents=True, exist_ok=True)
             torch.save(model.state_dict(), out / "model.pt")
             with open(out / "config.json", "w", encoding="utf-8") as f:

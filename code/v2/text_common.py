@@ -121,7 +121,7 @@ def load_sessions() -> list[dict]:
     The passage transcript is not used: the script is identical in every session.
     """
     ev, _ = load_evaluation()
-    recs = load_records("own_dataset.json")
+    recs = load_records()                       # active evaluation set (own or iemocap)
     out, empty = [], 0
     for s in ev:
         r = recs.get(s["freestyle_clip"], {})

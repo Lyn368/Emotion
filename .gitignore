@@ -39,6 +39,7 @@ ravdess/
 cremad/
 iemocap/
 emodb/
+modma/
 RAVDESS_IEMOCAP_CREMAD/*/
 iemocap_full_dataset.csv
 *_full_release/

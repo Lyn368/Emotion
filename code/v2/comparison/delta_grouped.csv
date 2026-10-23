@@ -1,0 +1,7 @@
+﻿dataset,encoder,seed,f1_without,f1_with,delta,ci_low,ci_high,p
+own,emotion2vec_base,42,0.1094,0.1175,0.0081,-0.0303,0.0463,0.337
+own,wavlm_base_plus,42,0.1171,0.116,-0.0011,-0.0223,0.0185,0.5285
+own,finetune:wavlm_base_plus_unfreeze2_stage1,42,0.1123,0.1138,0.0015,-0.0154,0.0194,0.422
+ravdess,wavlm_base_plus,42,0.7388,0.793,0.0541,0.0184,0.0913,0.0005
+cremad,wavlm_base_plus,42,0.7272,0.7843,0.0571,0.0447,0.0701,0.0
+iemocap,wavlm_base_plus,42,0.6675,0.6306,-0.037,-0.0649,-0.0141,1.0

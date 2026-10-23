@@ -1,0 +1,38 @@
+{
+  "settings": {
+    "cutoff": 10,
+    "svm": {
+      "kernel": "rbf",
+      "C": 1.0,
+      "gamma": "scale",
+      "class_weight": "balanced"
+    },
+    "linsvm": {
+      "C": 1.0,
+      "class_weight": "balanced",
+      "max_iter": 10000
+    },
+    "mlp": {
+      "hidden_layer_sizes": [
+        64
+      ],
+      "alpha": 0.01,
+      "max_iter": 500
+    },
+    "mlp_balance": true,
+    "pca_var_encoders": 0.95,
+    "n_random": 1000,
+    "n_boot": 2000,
+    "protocol": "Leave-One-User-Out",
+    "firebase": null,
+    "feature_sets": "acoustic_free,acoustic_delta_only,acoustic_delta",
+    "models": "svm,mlp",
+    "n_perm": 200,
+    "perm_models": "svm",
+    "seed": 42,
+    "jobs": -1
+  },
+  "firebase_file": "C:\\Users\\2022g\\Downloads\\RAVDESS_IEMOCAP_CREMAD\\firebase_data\\complete_firebase_data.json",
+  "diagnostics": {},
+  "rows": []
+}

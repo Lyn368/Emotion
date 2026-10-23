@@ -11,6 +11,7 @@ against the v1 number it replaces. Code and outputs both live in `code\v2`.
 | 2. Audio branch | `a1`-`a4`, `audio_common.py` | **done, tested** |
 | 3. Text branch | `t1`-`t3`, `text_common.py` | **done, tested** |
 | 4. Fusion | `f1_fusion.py` | **done, tested** |
+| 6. Public benchmarks | `p6_public_sessions.py`, `c1_compare_datasets.py`, `--eval` on a3 / a4 / t2 / t3 / f1 | **done, tested** |
 | 5. Multimodal | `m1_multimodal.py` | **done, tested on synthetic files; check the config on the real ones** |
 
 ## Setup on Windows (GPU)
@@ -176,3 +177,58 @@ valence classes, with paired tests against audio+text. Guards: label-like and
 identifier fields are dropped from metadata; any source that is >= 95% accurate
 alone is flagged. **Teammates' predictions must be out-of-fold on the same
 speaker-disjoint splits; send them `preprocessing\splits.json`.**
+
+## Phase 6 - the same pipeline on RAVDESS, CREMA-D and IEMOCAP
+
+Every branch takes `--eval own|ravdess|cremad|iemocap` (default `own`, unchanged).
+Public results go to `public_result\<dataset>\...`, never mixed with yours.
+
+```bat
+:: once: index, preprocess and build the public datasets (skip if already done)
+python p1_index_datasets.py
+python p2_preprocess_audio.py --datasets ravdess,cremad,iemocap
+python p3_transcribe.py --datasets iemocap              :: only IEMOCAP needs text
+python p4_build_datasets.py
+python p6_public_sessions.py --seeds 42,43,44,45,46
+
+:: audio on each public dataset
+for %d in (ravdess cremad iemocap) do python a1_acoustic_features.py --dataset %d
+for %d in (ravdess cremad iemocap) do python a2_encoder_embeddings.py --model wavlm_base_plus --dataset %d
+for %d in (ravdess cremad iemocap) do python a3_audio_frozen.py --eval %d --encoders wavlm_base_plus --protocols grouped
+
+:: text + fusion on IEMOCAP only
+python t1_text_pretrain.py --encoder emo_distilroberta --no_iemocap
+python t2_text_models.py --eval iemocap --protocols grouped
+python t2_text_models.py --eval iemocap --modes finetune --encoders emo_distilroberta --protocols grouped
+python t3_text_llm.py --eval iemocap
+python f1_fusion.py --eval iemocap --audio best --text best --protocol grouped --strategies late,stack,llm
+
+:: one table + figures for everything
+python c1_compare_datasets.py --protocol grouped
+```
+
+(`for %d in (...)` is cmd syntax. In PowerShell: `foreach ($d in "ravdess","cremad","iemocap") { python a3_audio_frozen.py --eval $d ... }`)
+
+How public data becomes "sessions": each utterance is the target and a NEUTRAL
+utterance by the same speaker is its reference (same sentence in RAVDESS / CREMA-D,
+same dialogue in IEMOCAP when possible). The reference never depends on the
+target's label and is never the target itself. This is exactly the role of your
+passage clip, so `<enc>` vs `<enc>_delta` tests the neutral reference on every corpus.
+
+Class sets: RAVDESS 7 (calm dropped), CREMA-D 6, IEMOCAP 4 (angry, happy+excited,
+neutral, sad; the usual benchmark). IEMOCAP folds are by recording session, so
+`louo` = leave-one-session-out, the standard IEMOCAP protocol.
+
+Leakage guards built in:
+- `a4 --from_stage1` is refused with `--eval iemocap` (that encoder was trained on IEMOCAP).
+- `t2 --eval iemocap` never uses a text stage-1 checkpoint that saw IEMOCAP; train one with
+  `t1 --no_iemocap` (saved separately as `text_<encoder>_noiemocap`).
+- Text and fusion are refused on RAVDESS / CREMA-D: every actor reads the same sentences.
+- Check the model card of any off-the-shelf emotion model (e.g. the `direct` mode) for
+  IEMOCAP in its training data before reporting it on IEMOCAP.
+
+`c1_compare_datasets.py` writes `comparison\`: a CSV of every run (mean +/- std over
+seeds, WA, UA, macro F1, valence), a Markdown table with the best run per dataset and
+branch plus chance levels, the with-vs-without-delta paired tests per dataset, and
+two figures. If audio works on RAVDESS / CREMA-D but not on your data, the pipeline
+is fine and the difference is the data (acted vs spontaneous, perceived vs self-reported).

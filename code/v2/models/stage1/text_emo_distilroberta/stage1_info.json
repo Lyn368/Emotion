@@ -13,6 +13,8 @@
   "n_val": 2080,
   "val_macro_f1_before": 0.46562557035753865,
   "val_macro_f1_after": 0.6424268791619087,
+  "used_goemotions": true,
+  "used_iemocap": true,
   "iemocap_text": "whisper",
   "note": "Public data only."
 }

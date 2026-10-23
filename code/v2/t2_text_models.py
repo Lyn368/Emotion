@@ -29,7 +29,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from audio_common import OOF, load_evaluation, macro_f1, summarise
-from config import ensure_dirs, seed_everything
+from config import TEXT_EVAL_SETS, ensure_dirs, seed_everything, set_eval
 from report import write_report
 from stats import paired_bootstrap_test
 from text_common import (DEVICE, EMOTION_LABELS, Lexicon, aggregate_by_owner, compute_class_weights,
@@ -113,6 +113,29 @@ def fit_mlp(X, y_unit, owner, y_sess, tr_rows, va_rows, va_sess, n_sess, seed):
     return prob
 
 
+def stage1_checkpoint(dirs, alias, eval_set):
+    """
+    Stage-1 text checkpoint to start fine-tuning from, or None.
+    When evaluating ON IEMOCAP, a checkpoint that saw IEMOCAP in stage 1 would have seen
+    the test utterances, so only the --no_iemocap one (GoEmotions only) is allowed.
+    """
+    import json as _json
+    base = dirs["models"] / "stage1"
+    if eval_set != "iemocap":
+        ck = base / f"text_{alias}"
+        return ck if ck.exists() else None
+    ck = base / f"text_{alias}_noiemocap"
+    if ck.exists():
+        info = _json.loads((ck / "stage1_info.json").read_text(encoding="utf-8"))
+        if info.get("used_iemocap", True):
+            raise SystemExit(f"[ERROR] {ck} was trained with IEMOCAP; cannot evaluate on IEMOCAP.")
+        return ck
+    if (base / f"text_{alias}").exists():
+        print(f"  [INFO] {alias}: stage-1 checkpoint includes IEMOCAP, so it is NOT used for --eval iemocap.")
+        print(f"         For stage 1 here run: python t1_text_pretrain.py --encoder {alias} --no_iemocap")
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser(description="Text branch")
     ap.add_argument("--encoders", default="minilm,emo_distilroberta,goemo_roberta")
@@ -126,9 +149,13 @@ def main():
     ap.add_argument("--no_stage1", action="store_true")
     ap.add_argument("--lr_encoder", type=float, default=2e-5)
     ap.add_argument("--lr_head", type=float, default=1e-4)
+    ap.add_argument("--eval", default="own", choices=TEXT_EVAL_SETS,
+                    help="own or iemocap (RAVDESS / CREMA-D repeat fixed sentences: no text signal)")
     a = ap.parse_args()
+    set_eval(a.eval)
 
     dirs = ensure_dirs()
+    print(f"[INFO] evaluation set: {a.eval} | results -> {dirs['text_result']}")
     out_root = dirs["text_result"]
     ev, splits = load_evaluation()
     sess = load_sessions()
@@ -159,8 +186,8 @@ def main():
                         X = np.hstack(parts).astype(np.float32)
                 run = f"{alias}_{gran}_{mode}{'_lex' if (lex and mode == 'frozen') else ''}"
                 if mode == "finetune":
-                    ck = dirs["models"] / "stage1" / f"text_{alias}"
-                    source = str(ck) if ck.exists() and not a.no_stage1 else model_id
+                    ck = stage1_checkpoint(dirs, alias, a.eval)
+                    source = str(ck) if ck is not None and not a.no_stage1 else model_id
                     run += "_stage1" if source == str(ck) else ""
 
                 for proto in a.protocols.split(","):

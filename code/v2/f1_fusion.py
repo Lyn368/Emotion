@@ -32,7 +32,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 
 from audio_common import OOF, N7, load_evaluation, macro_f1, read_json, summarise
-from config import ensure_dirs, get_device
+from config import TEXT_EVAL_SETS, ensure_dirs, eval_paths, get_device, set_eval
 from labels import EMOTIONS
 from report import plot_agreement, write_report
 from stats import paired_bootstrap_test
@@ -48,7 +48,24 @@ LLM_USER = (
     "Use only the evidence above; do not invent context. Which emotion did the speaker most likely "
     "feel? Choose exactly one of: angry, disgust, fear, happy, neutral, sad, surprise.\n"
     "Answer with the single word only.")
-LLM_SHA1 = hashlib.sha1((LLM_SYSTEM + "\n" + LLM_USER).encode("utf-8")).hexdigest()
+# IEMOCAP: an acted dialogue turn, referenced against a neutral turn by the same actor.
+LLM_USER_IEMOCAP = (
+    "An actor spoke one turn of a two-person conversation. As a reference we also have a neutral "
+    "turn spoken by the same actor.\n\n"
+    'What they said in this turn:\n"""{text}"""\n\n'
+    "How their voice in this turn differs from their own neutral turn:\n{acoustic}\n\n"
+    "Two trained classifiers gave these probabilities:\n  voice-based: {audio}\n  text-based:  {textp}\n\n"
+    "Use only the evidence above; do not invent context. Which emotion did the speaker most likely "
+    "express? Choose exactly one of: angry, disgust, fear, happy, neutral, sad, surprise.\n"
+    "Answer with the single word only.")
+
+
+def llm_prompt(eval_set: str) -> tuple[str, str]:
+    user = LLM_USER_IEMOCAP if eval_set == "iemocap" else LLM_USER
+    return user, hashlib.sha1((LLM_SYSTEM + "\n" + user).encode("utf-8")).hexdigest()
+
+
+LLM_SHA1 = llm_prompt("own")[1]
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +163,7 @@ def fuse_stack(A, T, y, fold_of, val_a, val_t, pos, seed):
     return out
 
 
-def fuse_llm(A, T, ev, texts, feats, cache_path, model_name, load_4bit):
+def fuse_llm(A, T, ev, texts, feats, cache_path, model_name, load_4bit, user_template=LLM_USER):
     from t3_text_llm import load_llm, score_labels
     cached = {}
     if cache_path.exists():
@@ -157,7 +174,7 @@ def fuse_llm(A, T, ev, texts, feats, cache_path, model_name, load_4bit):
     device = get_device(verbose=False)
     with open(cache_path, "a", encoding="utf-8") as f:
         for i, s in enumerate(ev):
-            msg = LLM_USER.format(text=texts[i], acoustic=acoustic_text(s, feats), audio=fmt(A[i]), textp=fmt(T[i]))
+            msg = user_template.format(text=texts[i], acoustic=acoustic_text(s, feats), audio=fmt(A[i]), textp=fmt(T[i]))
             cid = hashlib.sha1((model_name + LLM_SYSTEM + msg).encode("utf-8")).hexdigest()
             if cid not in cached:
                 if model is None:
@@ -181,7 +198,11 @@ def main():
     ap.add_argument("--strategies", default="late,stack", help="late, stack, llm")
     ap.add_argument("--llm", default="Qwen/Qwen2.5-3B-Instruct")
     ap.add_argument("--load_4bit", action="store_true")
+    ap.add_argument("--eval", default="own", choices=TEXT_EVAL_SETS,
+                    help="own or iemocap (RAVDESS / CREMA-D have no text signal, so no fusion)")
     a = ap.parse_args()
+    set_eval(a.eval)
+    llm_user, llm_sha1 = llm_prompt(a.eval)
 
     dirs = ensure_dirs()
     ev, _ = load_evaluation()
@@ -196,7 +217,7 @@ def main():
 
     from text_common import load_sessions
     texts = [s["text"] for s in load_sessions()]
-    fpath = dirs["prep"] / "features" / "acoustic_own.json"
+    fpath = eval_paths()["acoustic"]
     feats = read_json(fpath) if fpath.exists() else {}
 
     rows = []
@@ -226,7 +247,7 @@ def main():
             fused["stack"] = fuse_stack(A, T, y, fold_of, oa["val"], ot["val"], pos, seed)
         if "llm" in strategies:
             fused["llm"] = fuse_llm(A, T, ev, texts, feats, dirs["fusion_result"] / "llm_cache.jsonl",
-                                    a.llm, a.load_4bit)
+                                    a.llm, a.load_4bit, llm_user)
 
         print(f"\n== fusion | {a.protocol} | seed {seed} | "
               f"audio-only-right {agree['7 emotions']['audio_only']}, text-only-right {agree['7 emotions']['text_only']}")
@@ -241,7 +262,7 @@ def main():
                          extra_cols={"transcript": texts},
                          config={"audio_run": str(arun), "text_run": str(trun), "strategy": name,
                                  "protocol": a.protocol, "seed": seed, **info,
-                                 **({"llm": a.llm, "llm_prompt_sha1": LLM_SHA1} if name == "llm" else {})},
+                                 **({"llm": a.llm, "llm_prompt_sha1": llm_sha1} if name == "llm" else {})},
                          seed=seed, verbose=False)
             m = summarise(y, pred)
             txt = ""

@@ -21,7 +21,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import accuracy_score, f1_score
 
-from config import SAMPLE_RATE, V2_DIR, outputs
+from config import SAMPLE_RATE, V2_DIR, eval_name, eval_paths, outputs
 from labels import EMOTIONS, VALENCE, TO_VALENCE
 
 N7 = len(EMOTIONS)
@@ -39,8 +39,9 @@ def read_json(p):
     return json.loads(Path(p).read_text(encoding="utf-8"))
 
 
-def load_records(name: str = "own_dataset.json") -> dict[str, dict]:
-    d = read_json(outputs()["prep"] / name)
+def load_records(name: str | None = None) -> dict[str, dict]:
+    """Records of a dataset JSON; default = the active evaluation set (see config.set_eval)."""
+    d = read_json(outputs()["prep"] / (name or eval_paths()["records"]))
     recs = d["records"] if isinstance(d, dict) and "records" in d else d
     return {r.get("clip_id") or r.get("text_id"): r for r in recs}     # text-only sets use text_id
 
@@ -54,8 +55,12 @@ def abs_path(p: str | None) -> Path | None:
 
 
 def load_evaluation():
-    """Sessions of the evaluation set and the shared folds (from p5_make_splits.py)."""
-    d = read_json(outputs()["prep"] / "splits.json")
+    """Sessions of the active evaluation set and its shared folds (p5 for own, p6 for public)."""
+    p = eval_paths()["splits"]
+    if not p.exists():
+        maker = "p5_make_splits.py" if eval_name() == "own" else f"p6_public_sessions.py --datasets {eval_name()}"
+        raise SystemExit(f"[ERROR] {p} not found. Run {maker} first.")
+    d = read_json(p)
     return d["evaluation_set"], d["splits"]
 
 

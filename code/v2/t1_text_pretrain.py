@@ -3,6 +3,7 @@ t1_text_pretrain.py - Stage 1 of text fine-tuning, on PUBLIC data only.
 
     python t1_text_pretrain.py --encoder emo_distilroberta
     python t1_text_pretrain.py --encoder goemo_roberta --iemocap_text whisper
+    python t1_text_pretrain.py --encoder emo_distilroberta --no_iemocap   # needed for --eval iemocap
 
 Data (from preprocessing/):
   goemotions.json   27 fine emotions collapsed to our 7 with the authors' Ekman
@@ -111,12 +112,14 @@ def main():
     model, best = finetune(model, tok, [t for t, _ in train], np.array([EMOTION_LABELS.index(c) for _, c in train]),
                            val_fn=val_fn, epochs=a.epochs, batch=a.batch, max_len=a.max_len, seed=a.seed,
                            lr_encoder=a.lr_encoder, lr_head=a.lr_head)
-    out = ensure_dirs()["models"] / "stage1" / f"text_{alias}"
+    # a checkpoint that saw IEMOCAP cannot be evaluated on IEMOCAP, so it is stored separately
+    out = ensure_dirs()["models"] / "stage1" / f"text_{alias}{'_noiemocap' if a.no_iemocap else ''}"
     out.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(out); tok.save_pretrained(out)
     with open(out / "stage1_info.json", "w", encoding="utf-8") as f:
         json.dump({"source": model_id, "head": head, "train_counts": dict(cnt), "n_val": len(val),
                    "val_macro_f1_before": before, "val_macro_f1_after": best,
+                   "used_goemotions": not a.no_goemotions, "used_iemocap": not a.no_iemocap,
                    "iemocap_text": a.iemocap_text, "note": "Public data only."}, f, indent=2)
     free(model)
     print(f"[INFO] val macro F1 {before:.3f} -> {best:.3f} | saved -> {out}")
